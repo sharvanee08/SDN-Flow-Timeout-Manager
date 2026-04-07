@@ -19,6 +19,7 @@ This ensures efficient network operation and prevents stale entries in the flow 
 * Design and install flow rules using match–action logic
 * Demonstrate timeout-based flow rule management
 * Analyze network behavior using latency observations
+* Validate performance using network tools such as iperf
 
 ---
 
@@ -27,7 +28,9 @@ This ensures efficient network operation and prevents stale entries in the flow 
 * Python (Ryu Controller)
 * Mininet
 * OpenFlow 1.3
+* Open vSwitch (OVS)
 * Linux (Ubuntu)
+* iperf (Performance testing)
 
 ---
 
@@ -57,6 +60,18 @@ sudo mn --topo single,3 --controller remote --switch ovsk,protocols=OpenFlow13
 
 ```bash
 pingall
+```
+
+### Step 4: Performance Testing (Throughput)
+
+```bash
+iperf h1 h2
+```
+
+### Step 5: View Flow Table
+
+```bash
+sudo ovs-ofctl -O OpenFlow13 dump-flows s1
 ```
 
 ---
@@ -115,13 +130,30 @@ After waiting beyond the idle timeout:
 
 ---
 
+### 7.5 Throughput Analysis (iperf)
+
+![Iperf Result](screenshots/iperf.png)
+
+The iperf test shows high throughput between hosts, confirming efficient packet forwarding after flow installation.
+
+---
+
+### 7.6 Flow Table Verification
+
+![Flow Table](screenshots/flow_table.png)
+
+The flow table output confirms that flow rules are installed in the switch with specified timeout values, validating correct SDN behavior.
+
+---
+
 ## 8. Performance Analysis
 
-| Scenario           | Observation                |
-| ------------------ | -------------------------- |
-| First Packet       | Higher latency (~10–20 ms) |
-| Subsequent Packets | Low latency (~0.1–0.5 ms)  |
-| After Timeout      | Latency increases again    |
+| Scenario           | Observation                   |
+| ------------------ | ----------------------------- |
+| First Packet       | Higher latency (~10–20 ms)    |
+| Subsequent Packets | Low latency (~0.1–0.5 ms)     |
+| After Timeout      | Latency increases again       |
+| Throughput         | High (Gbps range using iperf) |
 
 ---
 
@@ -129,12 +161,29 @@ After waiting beyond the idle timeout:
 
 * Connectivity verified using `pingall`
 * Latency observed using `ping`
-* Flow lifecycle verified through repeated tests
-* Timeout behavior confirmed
+* Throughput measured using `iperf`
+* Flow table verified using `ovs-ofctl`
+* Flow lifecycle validated through timeout testing
 
 ---
 
-## 10. Project Structure
+## 10. Test Scenarios
+
+### Scenario 1: Normal Operation
+
+* First packet triggers controller (packet_in)
+* Flow rule is installed
+* Subsequent packets are forwarded directly
+
+### Scenario 2: Timeout Behavior
+
+* Flow entries expire after timeout
+* New packets again trigger controller
+* Flow rules are reinstalled
+
+---
+
+## 11. Project Structure
 
 ```
 SDN-Flow-Timeout-Manager/
@@ -143,21 +192,33 @@ SDN-Flow-Timeout-Manager/
 │   ├── pingall.png
 │   ├── flow_logs.png
 │   ├── first_ping.png
-│   └── timeout_ping.png
+│   ├── timeout_ping.png
+│   ├── iperf.png
+│   └── flow_table.png
 │── README.md
 ```
 
 ---
 
-## 11. Conclusion
+## 12. Conclusion
 
-This project demonstrates effective flow rule management in SDN using timeout mechanisms. It shows how controllers dynamically handle traffic and maintain efficient flow tables.
+This project demonstrates effective flow rule management in SDN using timeout mechanisms. It highlights how a controller dynamically installs and removes flow rules based on network activity.
+
+The use of tools such as iperf and flow table inspection strengthens validation by providing both performance metrics and direct evidence of flow rule installation.
 
 ---
 
-## 12. Author
+## 13. Author
 
-- Name: Sharvanee Naru  
-- SRN: PES2UG24CS459
-  
+* Name: Sharvanee Naru
+* SRN: PES2UG24CS459
+
+---
+
+## 14. References
+
+* Ryu Documentation: https://ryu.readthedocs.io/
+* Mininet Documentation: http://mininet.org/
+* OpenFlow Specification: https://opennetworking.org/
+
 ---
