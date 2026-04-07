@@ -157,7 +157,7 @@ This project demonstrates effective flow rule management in SDN using timeout me
 
 ## 12. Author
 
-Sharvanee Naru
-Computer Science Engineering
+Name: Sharvanee Naru
+SRN: PES2UG24CS459
 
 ---
