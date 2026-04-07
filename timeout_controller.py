@@ -5,18 +5,22 @@ from ryu.controller.handler import set_ev_cls
 from ryu.ofproto import ofproto_v1_3
 
 class TimeoutController(app_manager.RyuApp):
+    # Use OpenFlow 1.3
     OFP_VERSIONS = [ofproto_v1_3.OFP_VERSION]
 
     def __init__(self, *args, **kwargs):
         super(TimeoutController, self).__init__(*args, **kwargs)
+        # Dictionary to store MAC to port mapping
         self.mac_to_port = {}
 
+    # Triggered when switch connects to controller
     @set_ev_cls(ofp_event.EventOFPSwitchFeatures, CONFIG_DISPATCHER)
     def switch_features_handler(self, ev):
         datapath = ev.msg.datapath
         ofproto = datapath.ofproto
         parser = datapath.ofproto_parser
 
+        # Default rule: send unknown packets to controller
         match = parser.OFPMatch()
         actions = [parser.OFPActionOutput(ofproto.OFPP_CONTROLLER)]
 
@@ -30,6 +34,7 @@ class TimeoutController(app_manager.RyuApp):
         )
         datapath.send_msg(mod)
 
+    # Handle incoming packets from switch
     @set_ev_cls(ofp_event.EventOFPPacketIn, MAIN_DISPATCHER)
     def packet_in_handler(self, ev):
         msg = ev.msg
@@ -42,6 +47,7 @@ class TimeoutController(app_manager.RyuApp):
         dpid = datapath.id
         self.mac_to_port.setdefault(dpid, {})
 
+        # Extract packet information
         from ryu.lib.packet import packet, ethernet
         pkt = packet.Packet(msg.data)
         eth = pkt.get_protocol(ethernet.ethernet)
@@ -49,8 +55,10 @@ class TimeoutController(app_manager.RyuApp):
         dst = eth.dst
         src = eth.src
 
+        # Learn source MAC address
         self.mac_to_port[dpid][src] = in_port
 
+        # Decide output port
         if dst in self.mac_to_port[dpid]:
             out_port = self.mac_to_port[dpid][dst]
         else:
@@ -58,15 +66,16 @@ class TimeoutController(app_manager.RyuApp):
 
         actions = [parser.OFPActionOutput(out_port)]
 
+        # Match rule
         match = parser.OFPMatch(in_port=in_port, eth_dst=dst)
 
-        # 🔥 FLOW WITH TIMEOUT
+        # Install flow rule with timeout
         mod = parser.OFPFlowMod(
             datapath=datapath,
             priority=1,
             match=match,
-            idle_timeout=10,
-            hard_timeout=30,
+            idle_timeout=10,   # remove if inactive for 10 sec
+            hard_timeout=30,   # remove after 30 sec regardless
             instructions=[
                 parser.OFPInstructionActions(
                     ofproto.OFPIT_APPLY_ACTIONS, actions
@@ -74,9 +83,10 @@ class TimeoutController(app_manager.RyuApp):
             ]
         )
 
+        # Send flow rule to switch
         datapath.send_msg(mod)
 
-        # ✅ SEND CURRENT PACKET
+        # Send current packet immediately
         out = parser.OFPPacketOut(
             datapath=datapath,
             buffer_id=msg.buffer_id,
@@ -86,6 +96,7 @@ class TimeoutController(app_manager.RyuApp):
         )
         datapath.send_msg(out)
 
+        # Log flow installation
         self.logger.info(
             "Flow added: %s -> %s (idle=10, hard=30)",
             src, dst
